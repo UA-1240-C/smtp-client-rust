@@ -22,14 +22,17 @@ pub struct SmtpSession {
 
 impl SmtpSession {
     pub async fn connect(server: &str) -> Result<Self, Error> {
+        let stream = AsyncStream::new(server).await?;
         Ok(
             Self {
-                m_stream: AsyncStream::new(server).await?,
+                m_stream: stream,
             }
         )
     }
 
     pub async fn initialize_secure_conncetion(&mut self) -> Result<(), Error> {
+        print!("{}", self.read_response().await?);
+
         self.send_ehlo().await?;
         print!("{}", self.read_response().await?);
 
