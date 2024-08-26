@@ -1,4 +1,4 @@
-use std::{fmt, path::Display};
+use std::fmt;
 
 use async_stream::AsyncStream;
 use error_handler::Error;
@@ -107,7 +107,7 @@ impl SmtpSession {
     }
 
 
-    async fn send_quit_cmd(&mut self) -> Result<usize, Error> {
+    pub async fn send_quit_cmd(&mut self) -> Result<usize, Error> {
         let request = self.send_cmd(Quit).await;
         self.handle_response(request).await
     }
