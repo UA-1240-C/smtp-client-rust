@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 async_stream = { path = "../async_stream" }
 error_handler = { path = "../error_handler" }
+base64 = "0.22.1"
