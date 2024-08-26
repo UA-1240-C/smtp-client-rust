@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 smtp_session = { path = "../smtp_session" }
+tokio = { version = "1", features = ["full"] }
+tokio-native-tls = "0.3.0"

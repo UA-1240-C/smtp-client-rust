@@ -106,3 +106,4 @@ impl Application for App {
 fn main() -> iced::Result {
     App::run(iced::Settings::default())
 }
+
