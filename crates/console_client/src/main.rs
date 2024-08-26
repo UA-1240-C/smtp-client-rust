@@ -12,16 +12,9 @@ async fn main() -> Result<()> {
         .subject("")
         .body("");
 
-
-
-
     client.encrypt_connection().await.unwrap();
     client.authenticate("", "").await.unwrap();
     client.send_message(message.build().unwrap()).await.unwrap();
 
-
-
-
-    
     Ok(())
 }
