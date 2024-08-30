@@ -40,8 +40,8 @@ pub struct SmtpSession {
 }
 
 impl SmtpSession {
-    pub async fn connect(server: &str) -> Result<Self, Error> {
-        let stream = AsyncStream::new(server).await?;
+    pub async fn connect(server: String) -> Result<Self, Error> {
+        let stream = AsyncStream::new(&server).await?;
         let mut smtp_session = Self { m_stream: stream };
 
         println!("{}", smtp_session.read_response().await?);

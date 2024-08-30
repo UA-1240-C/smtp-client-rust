@@ -1,4 +1,4 @@
-use iced::{Element, Length};
+use iced::{Command, Element, Length};
 use iced::widget::{column, row, Button, Container, Text, TextInput};
 
 #[derive(Debug, Clone)]
@@ -70,5 +70,17 @@ impl Home {
         .width(Length::Fill)
         .height(Length::Fill)
         .into()
+    }
+}
+
+// external methods
+
+impl Home {
+    pub fn get_message_data(&self) -> (String, String, String) {
+        let recipient = self.recipient.clone();
+        let subject = self.subject.clone();
+        let message = self.message.clone();
+
+        (recipient, subject, message)
     }
 }

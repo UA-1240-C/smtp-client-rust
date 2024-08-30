@@ -1,5 +1,5 @@
 
-use iced::{alignment, Element, Length};
+use iced::{alignment, Command, Element, Length};
 use iced::widget::{column, row, Button, Container, Space, Text, TextInput};
 
 
@@ -125,7 +125,7 @@ impl Login {
 // external methods
 
 impl Login {
-    pub fn validate_input(&self) -> Result<(), String> {
+    pub fn validate_input(&self) -> Result<(String, String, String), String> {
         if self.server.is_empty() || self.login.is_empty() || self.password.is_empty() {
             return Err("Please fill all the fields".to_string());
         }
@@ -135,12 +135,16 @@ impl Login {
             return Err("Invalid server address".to_string());
         }
 
-        let re = regex::Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+        let re = regex::Regex::new(r"^[a-zA-Z0-9.%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}$").unwrap();
         if !re.is_match(&self.login) {
             return Err("Invalid email address".to_string());
         }
 
-        Ok(())
+        Ok((self.server.clone().to_string(), self.login.clone().to_string(), self.password.clone().to_string()))
 
+    }
+
+    pub fn get_state(&self) -> State {
+        self.state.clone()
     }
 }

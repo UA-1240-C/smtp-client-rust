@@ -3,7 +3,7 @@ use smtp_session::{SmtpSession, SmtpMessageBuilder, SmtpMessage};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut client = SmtpSession::connect("smtp.gmail.com:587").await.unwrap();
+    let mut client = SmtpSession::connect("smtp.gmail.com:587".to_string()).await.unwrap();
 
     
     let message = SmtpMessageBuilder::new()
