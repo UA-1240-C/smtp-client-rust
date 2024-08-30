@@ -14,6 +14,7 @@ use SmtpCommand::*;
 pub enum SmtpCommand {
     Ehlo,
     StartTls,
+    Register,
     AuthPlain,
     MailFrom,
     RcptTo,
@@ -27,6 +28,7 @@ impl fmt::Display for SmtpCommand {
         match self {
             Self::Ehlo => write!(f, "EHLO"),
             Self::StartTls => write!(f, "STARTTLS"),
+            Self::Register => write!(f, "REGISTER"),
             Self::AuthPlain => write!(f, "AUTH PLAIN"),
             Self::MailFrom => write!(f, "MAIL FROM:"),
             Self::RcptTo => write!(f, "RCPT TO:"),
@@ -58,6 +60,11 @@ impl SmtpSession {
         Ok(true)
     }
 
+    pub async fn register(&mut self, username: &str, password: &str) -> Result<usize, Error> {
+        let encoded_register = base64::encode(format!("\0{}\0{}", username, password).as_str());
+        self.send_register_cmd(encoded_register.as_str()).await
+    }
+
     pub async fn authenticate(&mut self, username: &str, password: &str) -> Result<usize, Error> {
         let encoded_auth = base64::encode(format!("\0{}\0{}", username, password).as_str());
         self.send_auth_plain_cmd(encoded_auth.as_str()).await
@@ -84,6 +91,13 @@ impl SmtpSession {
 
     async fn send_starttls_cmd(&mut self) -> Result<usize, Error> {
         let request = self.send_cmd(StartTls).await?;
+        self.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;
+
+        Ok(request)
+    }
+
+    async fn send_register_cmd(&mut self, encoded_auth: &str) -> Result<usize, Error> {
+        let request = self.send_cmd_with_arg(Register, encoded_auth).await?;
         self.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;
 
         Ok(request)

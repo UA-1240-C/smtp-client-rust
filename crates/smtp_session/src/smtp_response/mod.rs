@@ -66,7 +66,6 @@ impl SmtpResponseBuilder {
     pub fn build(&self, raw_response: &str) -> Result<SmtpResponse, Error> {
         let status_code = self.parse_status_code(raw_response)?;
         let status = SmtpStatus::from(status_code);
-
         let text = self.parse_text(raw_response)?;
 
         Ok(SmtpResponse {
@@ -80,6 +79,7 @@ impl SmtpResponseBuilder {
         if self.is_valid_response(raw_response) {
             let re = Regex::new(r"(\d{3})").unwrap();
             let caps = re.captures(raw_response).unwrap();
+            
             Ok(caps.get(1).unwrap().as_str().parse::<u16>().unwrap())
         } else {
             Err(Error::SmtpResponse("Invalid response".to_string()))
