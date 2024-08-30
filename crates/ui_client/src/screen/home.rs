@@ -1,4 +1,4 @@
-use iced::{Command, Element, Length};
+use iced::{Element, Length};
 use iced::widget::{column, row, Button, Container, Text, TextInput};
 
 #[derive(Debug, Clone)]

@@ -1,5 +1,5 @@
 
-use iced::{alignment, Command, Element, Length};
+use iced::{alignment, Element, Length};
 use iced::widget::{column, row, Button, Container, Space, Text, TextInput};
 
 
