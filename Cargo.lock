@@ -2452,6 +2452,7 @@ dependencies = [
  "async_stream",
  "base64",
  "error_handler",
+ "regex",
 ]
 
 [[package]]

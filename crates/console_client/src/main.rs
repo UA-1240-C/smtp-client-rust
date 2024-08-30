@@ -33,7 +33,6 @@ async fn main() -> Result<()> {
 
     tokio::spawn(async move {
         sigint.recv().await;
-        stdout().flush();
         if let Some(shadow_session) = cloned_session.lock().await.as_mut() {
             match shadow_session.send_quit_cmd().await {
                 Ok(_) => {
@@ -58,6 +57,7 @@ async fn main() -> Result<()> {
                         server = server.trim().to_string();
                     }
                     Err(err) => {
+                        state = State::Start;
                         print_w_flush!("Error: {}\n", err);
                     }
                 };
@@ -82,9 +82,10 @@ async fn main() -> Result<()> {
                 let mut response = String::new();
                 match stdin().read_line(&mut response) {
                     Ok(_) => {
-                        // pass
+                        response = response.trim().to_string();
                     }
                     Err(err) => {
+                        state = State::Connected;
                         print_w_flush!("Error: {}", err);
                     }
                 };
@@ -117,24 +118,27 @@ async fn main() -> Result<()> {
                 let mut username = String::new();
                 match stdin().read_line(&mut username) {
                     Ok(_) => {
-                        // pass
+                        username = username.trim().to_string();
                     }
                     Err(err) => {
+                        state = State::Encrypted;
                         print_w_flush!("Error: {}", err);
                     }
                 };
 
                 print_w_flush!("Enter password: ");
-
                 let mut password = String::new();
                 match stdin().read_line(&mut password) {
                     Ok(_) => {
-                        // pass
+                        password = password.trim().to_string();
                     }
                     Err(err) => {
+                        state = State::Encrypted;
                         print_w_flush!("Error: {}", err);
                     }
                 };
+
+                print_w_flush!("{username}, {password}");
 
                 if let Some(session) = session.lock().await.as_mut() {
                     match session.authenticate(&username, &password).await {
@@ -142,22 +146,22 @@ async fn main() -> Result<()> {
                             state = State::Authenticated;
                         }
                         Err(err) => {
-                            state = State::Connected;
+                            state = State::Encrypted;
                             print_w_flush!("Error: {}", err);
                         }
                     }
                 }
-                state = State::Authenticated;
-            }.await,
+                            }.await,
             State::Authenticated => async {
                 print_w_flush!("Enter sender email: ");
 
                 let mut sender = String::new();
                 match stdin().read_line(&mut sender) {
                     Ok(_) => {
-                        // pass
+                        sender = sender.trim().to_string();
                     }
                     Err(err) => {
+                        state = State::Authenticated;
                         print_w_flush!("Error: {}", err);
                     }
                 };
@@ -167,9 +171,10 @@ async fn main() -> Result<()> {
                 let mut recipient = String::new();
                 match stdin().read_line(&mut recipient) {
                     Ok(_) => {
-                        // pass
+                        recipient = recipient.trim().to_string();
                     }
                     Err(err) => {
+                        state = State::Authenticated;
                         print_w_flush!("Error: {}", err);
                     }
                 };
@@ -179,9 +184,10 @@ async fn main() -> Result<()> {
                 let mut subject = String::new();
                 match stdin().read_line(&mut subject) {
                     Ok(_) => {
-                        // pass
+                        subject = subject.trim().to_string();
                     }
                     Err(err) => {
+                        state = State::Authenticated;
                         print_w_flush!("Error: {}", err);
                     }
                 };
@@ -191,9 +197,10 @@ async fn main() -> Result<()> {
                 let mut message = String::new();
                 match stdin().read_line(&mut message) {
                     Ok(_) => {
-                        // pass
+                        message = message.trim().to_string();
                     }
                     Err(err) => {
+                        state = State::Authenticated;
                         print_w_flush!("Error: {}", err);
                     }
                 };
@@ -231,9 +238,10 @@ async fn main() -> Result<()> {
                 let mut response = String::new();
                 match stdin().read_line(&mut response) {
                     Ok(_) => {
-                        // pass
+                        response = response.trim().to_string();
                     }
                     Err(err) => {
+                        state = State::MessageSent;
                         print_w_flush!("Error: {}", err);
                     }
                 };

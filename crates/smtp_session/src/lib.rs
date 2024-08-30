@@ -5,8 +5,11 @@ use error_handler::Error;
 
 mod base64;
 mod message;
+mod smtp_response;
 
 pub use message::{SmtpMessage, SmtpMessageBuilder};
+
+use smtp_response::{SmtpResponse, SmtpResponseBuilder, SmtpStatus};
 use SmtpCommand::*;
 pub enum SmtpCommand {
     Ehlo,
@@ -18,7 +21,6 @@ pub enum SmtpCommand {
     Quit,
     Dot,
 }
-
 
 impl fmt::Display for SmtpCommand {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -44,7 +46,7 @@ impl SmtpSession {
         let stream = AsyncStream::new(server).await?;
         let mut smtp_session = Self { m_stream: stream };
 
-        println!("{}", smtp_session.read_response().await?);
+        smtp_session.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;
         smtp_session.send_ehlo_cmd().await?;
 
         Ok(smtp_session)
@@ -70,46 +72,58 @@ impl SmtpSession {
 
         self.send_data_cmd().await?;
         self.send_message_imf(&message).await
-
     }
-    
 
+    
     async fn send_ehlo_cmd(&mut self) -> Result<usize, Error> {
-        let request = self.send_cmd_with_arg(Ehlo, "localhost").await;
-        self.handle_response(request).await
+        let request = self.send_cmd_with_arg(Ehlo, "localhost").await?;
+        self.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;
+
+        Ok(request)
     }
 
     async fn send_starttls_cmd(&mut self) -> Result<usize, Error> {
-        let request = self.send_cmd(StartTls).await;
-        self.handle_response(request).await
+        let request = self.send_cmd(StartTls).await?;
+        self.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;
+
+        Ok(request)
     }
 
     async fn send_auth_plain_cmd(&mut self, encoded_auth: &str) -> Result<usize, Error> {
-        let request = self.send_cmd_with_arg(AuthPlain, encoded_auth).await;
-        self.handle_response(request).await
+        let request = self.send_cmd_with_arg(AuthPlain, encoded_auth).await?;
+        self.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;
+
+        Ok(request)
     }
 
     async fn send_mail_from_cmd(&mut self, from: &str) -> Result<usize, Error> {
         let arg = format!("<{from}>");
-        let request = self.send_cmd_with_arg(MailFrom, &arg).await;
-        self.handle_response(request).await
+        let request = self.send_cmd_with_arg(MailFrom, &arg).await?;
+        self.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;
+
+        Ok(request)
     }
 
     async fn send_rcpt_to_cmd(&mut self, to: &str) -> Result<usize, Error> {
         let arg = format!("<{to}>");
-        let request = self.send_cmd_with_arg(RcptTo, &arg).await;
-        self.handle_response(request).await
+        let request = self.send_cmd_with_arg(RcptTo, &arg).await?;
+        self.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;
+
+        Ok(request)
     }
 
     async fn send_data_cmd(&mut self) -> Result<usize, Error> {
-        let request = self.send_cmd(Data).await;
-        self.handle_response(request).await
+        let request = self.send_cmd(Data).await?;
+        self.handle_response().await?.status_should_be(SmtpStatus::PositiveIntermediate)?;
+
+        Ok(request)
     }
 
-
     pub async fn send_quit_cmd(&mut self) -> Result<usize, Error> {
-        let request = self.send_cmd(Quit).await;
-        self.handle_response(request).await
+        let request = self.send_cmd(Quit).await?;
+        self.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;
+
+        Ok(request)
     }
 
     async fn send_message_imf(&mut self, message: &SmtpMessage) -> Result<usize, Error> {
@@ -119,9 +133,6 @@ impl SmtpSession {
         request
     }
 
-    pub async fn read_response(&mut self) -> Result<String, Error> {
-        self.m_stream.read().await
-    }
 
     async fn send_cmd(&mut self, cmd: SmtpCommand) -> Result<usize, Error> {
         let command = format!("{cmd}\r\n");
@@ -135,9 +146,16 @@ impl SmtpSession {
         self.m_stream.write(command.as_bytes()).await
     }
 
-    async fn handle_response<T>(&mut self, response: Result<T, Error>) -> Result<T, Error> {
-        let response = response?;
-        print!("{}", self.read_response().await?);
-        Ok(response)
+
+    async fn handle_response(&mut self) -> Result<SmtpResponse, Error> {
+        let smtp_response_builder = SmtpResponseBuilder::new();
+
+        match smtp_response_builder.build(&self.m_stream.read().await?) {
+            Ok(smtp_response) => {
+                print!("{}", smtp_response.get_raw_response());
+                Ok(smtp_response)
+            },
+            Err(e) => Err(e),
+        }
     }
 }

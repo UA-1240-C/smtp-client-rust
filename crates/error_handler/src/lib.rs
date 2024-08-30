@@ -5,6 +5,7 @@ pub enum Error {
     Io(std::io::Error),
     Tls(tokio_native_tls::native_tls::Error),
     AddrParseError(std::net::AddrParseError),
+    SmtpResponse(String),
     Smtp(String),
     Unwrap(String),
     TlsUpgrade(String),
@@ -14,7 +15,7 @@ pub enum Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{:?}\n", self)
     }
 }
 
