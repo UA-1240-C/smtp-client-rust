@@ -8,7 +8,7 @@ use iced::Application;
 pub mod screen;
 use screen::{login, home};
 
-use smtp_session::{self, SmtpSession};
+use smtp_session::{self, SmtpMessage, SmtpSession};
 use home::HomeMessage;
 use login::LoginMessage;
 use error_handler::Error;
@@ -94,10 +94,10 @@ impl Application for App {
                     },
                     home::HomeMessage::Send => {
                         if let Screen::HomePage(page) = &mut self.screen {
-                            let (recipient, subject, body) = page.get_message_data();
-                            let sender = self.logged_user.clone().unwrap();
+                            let builder = page.get_message_builder();
+                            let message = builder.from(&self.logged_user.clone().expect("")).build().unwrap();
                             
-                            return App::handle_send_message(self.session.clone(), sender, recipient, subject, body);
+                            return App::handle_send_message(self.session.clone(), message);
                         }
                     },
                     _ => {
@@ -139,7 +139,7 @@ impl App {
             {
                 let mut session = session.lock().await;
 
-                if let Ok(mut smtp_session) = SmtpSession::connect(server).await {
+                if let Ok(mut smtp_session) = SmtpSession::connect(&server).await {
                     smtp_session.encrypt_connection().await?;
                     let result = match state {
                         screen::login::State::Login => smtp_session.authenticate(&login, &password).await,
@@ -151,7 +151,7 @@ impl App {
                 }
                 else {
                     *session = None;
-                    return Err(Error::Smtp("Connection failed".to_string()));
+                    return Err(Error::SmtpResponse("Connection failed".to_string()));
                 }
                 
             }),
@@ -180,25 +180,17 @@ impl App {
         )
     }
 
-    fn handle_send_message(session: Arc<Mutex<Option<SmtpSession>>>, sender: String, recipient: String, subject: String, body: String) -> Command<Message> {
+    fn handle_send_message(session: Arc<Mutex<Option<SmtpSession>>>, message: SmtpMessage) -> Command<Message> {
         Command::perform(tokio::task::spawn(
             async move
             {
                 let mut session = session.lock().await;
 
-                let message = smtp_session::SmtpMessageBuilder::new()
-                    .from(&sender)
-                    .to(&recipient)
-                    .subject(&subject)
-                    .body(&body)
-                    .build()
-                    .unwrap();
-
                 if let Some(smtp_session) = session.as_mut() {
                     smtp_session.send_message(message).await?;
                 }
                 else {
-                    return Err(Error::Smtp("Connection failed".to_string()));
+                    return Err(Error::SmtpResponse("Connection failed".to_string()));
                 }
                 Ok(true)
             }),

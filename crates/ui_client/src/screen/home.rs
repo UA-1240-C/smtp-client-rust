@@ -1,5 +1,6 @@
 use iced::{Element, Length, Padding};
 use iced::widget::{column, row, Button, Container, Text, TextInput, text_editor::{Content, TextEditor, Action}};
+use smtp_session::SmtpMessageBuilder;
 
 #[derive(Debug, Clone)]
 pub enum HomeMessage {
@@ -91,11 +92,10 @@ impl Home {
 // external methods
 
 impl Home {
-    pub fn get_message_data(&self) -> (String, String, String) {
-        let recipient = self.recipient.clone();
-        let subject = self.subject.clone();
-        let message = self.message.clone();
-
-        (recipient, subject, message)
+    pub fn get_message_builder(&self) -> SmtpMessageBuilder {
+        SmtpMessageBuilder::new()
+            .to(&self.recipient.clone())
+            .subject(&self.subject.clone())
+            .body(&self.message.text())
     }
 }
