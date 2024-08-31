@@ -89,7 +89,7 @@ impl NodeInfo {
                 );
             }
         }
-        Err(Error::PlainError("Invalid address".to_string()))
+        Err(Error::AsyncStream("Invalid address".to_string() + " " + host))
     }
 
     pub fn get_ipv4(&self) -> String {
@@ -134,7 +134,7 @@ impl AsyncStream {
 
     pub async fn try_upgrade_to_tls(&mut self) -> Result<(), Error> {
         if !self.is_open() {
-            return Err(Error::ClosedConnection("".to_string()));
+            return Err(Error::ClosedConnection("Encrypt connection".to_string()));
         }
 
         let native_tls_connector = NativeTlsConnector::builder()
@@ -150,10 +150,10 @@ impl AsyncStream {
                 self.m_is_encrypted = Some(true);
                 return Ok(());
             } else {
-                Err(Error::TlsUpgrade("Connection is already encrypted".to_string()))
+                Err(Error::TlsUpgrade("Encrypt connection. Connection is already encrypted".to_string()))
             }
         } else {
-            Err(Error::TlsUpgrade("Connection is already encrypted".to_string()))
+            Err(Error::TlsUpgrade("Encrypt connection. Connection is already encrypted".to_string()))
         }
     }
 
@@ -161,7 +161,7 @@ impl AsyncStream {
         if self.is_open() {
             Ok(self.m_host.as_ref().unwrap().clone())
         } else {
-            Err(Error::ClosedConnection("".to_string()))
+            Err(Error::ClosedConnection("Get host info".to_string()))
         }
     }
 
@@ -169,7 +169,7 @@ impl AsyncStream {
         if self.is_open() {
             Ok(self.m_peer.as_ref().unwrap().clone())
         } else {
-            Err(Error::ClosedConnection("".to_string()))
+            Err(Error::ClosedConnection("Get peer info".to_string()))
         }
     }
 
@@ -188,7 +188,7 @@ impl AsyncStream {
         if self.is_open() {
             Ok(self.m_is_encrypted.unwrap())
         } else {
-            Err(Error::ClosedConnection("".to_string()))
+            Err(Error::ClosedConnection("Check encryption status".to_string()))
         }
     }
 
@@ -196,7 +196,7 @@ impl AsyncStream {
         if self.is_open() {
             self.m_stream.as_mut().unwrap().write(buf).await.map_err(Error::from)
         } else {
-            Err(Error::ClosedConnection("".to_string()))
+            Err(Error::ClosedConnection("Write".to_string()))
         }
     }
 
@@ -204,7 +204,7 @@ impl AsyncStream {
         if self.is_open() {
             self.read_response_until_crlf().await
         } else {
-            Err(Error::ClosedConnection("".to_string()))
+            Err(Error::ClosedConnection("Read".to_string()))
         }
     }
 

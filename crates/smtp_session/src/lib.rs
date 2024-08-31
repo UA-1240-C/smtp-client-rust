@@ -10,6 +10,8 @@ mod smtp_response;
 pub use message::{SmtpMessage, SmtpMessageBuilder};
 
 use smtp_response::{SmtpResponse, SmtpResponseBuilder, SmtpStatus};
+use tokio::time::{timeout, Duration};
+
 use SmtpCommand::*;
 pub enum SmtpCommand {
     Ehlo,
@@ -44,8 +46,10 @@ pub struct SmtpSession {
 }
 
 impl SmtpSession {
-    pub async fn connect(server: String) -> Result<Self, Error> {
-        let stream = AsyncStream::new(&server).await?;
+    pub async fn connect(server: &str) -> Result<Self, Error> {
+        let stream = timeout(Duration::from_secs(5), AsyncStream::new(server))
+            .await?.map_err(Error::from)?;
+
         let mut smtp_session = Self { m_stream: stream };
 
         smtp_session.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;

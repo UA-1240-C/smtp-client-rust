@@ -1,3 +1,5 @@
+use error_handler::Error;
+
 #[derive(Debug)]
 pub struct SmtpMessage {
     pub from: String,
@@ -64,21 +66,21 @@ impl SmtpMessageBuilder {
         self
     }
 
-    pub fn build(self) -> Result<SmtpMessage, &'static str> {
+    pub fn build(self) -> Result<SmtpMessage, Error> {
         if self.from.is_none() {
-            return Err("Missing 'from' field");
+            return Err(Error::MessageBuild("Missing 'from' field".to_string()));
         }
 
         if self.to.is_empty() {
-            return Err("Missing 'to' field");
+            return Err(Error::MessageBuild("Missing 'to' field".to_string()));
         }
 
         if self.subject.is_none() {
-            return Err("Missing 'subject' field");
+            return Err(Error::MessageBuild("Missing 'subject' field".to_string()));
         }
 
         if self.body.is_none() {
-            return Err("Missing 'body' field");
+            return Err(Error::MessageBuild("Missing 'body' field".to_string()));
         }
 
         Ok(SmtpMessage {
@@ -141,7 +143,7 @@ mod tests {
             .body("Hello, Emily!");
 
         match message.build() {
-            Err(e) => assert_eq!(e, "Missing 'from' field"),
+            Err(e) => assert_eq!(e, Error::MessageBuild("Missing 'from' field".to_string())),
             _ => panic!("Expected an error"),
         }
     }
