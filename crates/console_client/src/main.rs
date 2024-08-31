@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
                     }
                 };
 
-                let shadow_session = SmtpSession::connect(&server);
+                let shadow_session = SmtpSession::connect(server);
 
                 match shadow_session.await {
                     Ok(shadow_session) => {

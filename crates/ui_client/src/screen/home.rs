@@ -60,7 +60,7 @@ impl Home {
 
                 ].spacing(20.),
 
-                Text::new(self.info_message.clone())
+                Text::new(self.info_message.clone()).size(12.0).line_height(1.0),
             ].max_width(400.)
             .spacing(20.)
         )

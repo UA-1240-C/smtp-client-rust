@@ -144,6 +144,7 @@ impl SmtpSession {
         let message = format!("{}{}", message.to_imf(),  Dot);
         print!("{}", message);
         let request = self.m_stream.write(message.as_bytes()).await;
+        self.handle_response().await?.status_should_be(SmtpStatus::PositiveCompletion)?;
         request
     }
 

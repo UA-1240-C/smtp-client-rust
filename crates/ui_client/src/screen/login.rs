@@ -104,7 +104,7 @@ impl Login {
             ].align_items(alignment::Horizontal::Center.into()).spacing(20.).width(Length::Fill),
 
             // status of the login / register attempt
-            Text::new(self.info_message.clone())
+            Text::new(self.info_message.clone()).size(12.0).line_height(1.0),
 
             ].max_width(400)
             .spacing(20.0)

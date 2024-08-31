@@ -1,5 +1,5 @@
-
 use std::sync::Arc;
+use login::State;
 use tokio::sync::Mutex;
 use iced::{Command, Element, executor, Theme};
 use iced::widget::container;
@@ -9,6 +9,8 @@ pub mod screen;
 use screen::{login, home};
 
 use smtp_session::{self, SmtpSession};
+use home::HomeMessage;
+use login::LoginMessage;
 use error_handler::Error;
 
 pub enum Screen {
@@ -61,20 +63,19 @@ impl Application for App {
                 match msg {
                     login::LoginMessage::ToHome => {
                         let Screen::LoginPage(page) = &mut self.screen else { return Command::none(); };
+                        let state = page.get_state();
                         let validation_result = page.validate_input();
 
                         match validation_result {
                             Ok(res) => {
                                 let (server, login, password) = res;
                                 self.save_user_credentials(login.clone(), password.clone());
-
-                                return App::handle_login(self.session.clone(), server, login, password);
-
+                                
+                                return App::handle_auth(self.session.clone(), server, login, password, state);
                             },
                             Err(e) => {
                                 page.update(login::LoginMessage::UpdateInfoMessage(e));
                                 return iced::Command::none();
-                                
                             }
                         }
                     },
@@ -97,7 +98,6 @@ impl Application for App {
                             let sender = self.logged_user.clone().unwrap();
                             
                             return App::handle_send_message(self.session.clone(), sender, recipient, subject, body);
-
                         }
                     },
                     _ => {
@@ -131,10 +131,9 @@ impl App {
     }
 }
 
-// helper functions
-
+// commands
 impl App {
-    fn handle_login(session: Arc<Mutex<Option<SmtpSession>>>, server: String, login: String, password: String) -> Command<Message> {
+    fn handle_auth(session: Arc<Mutex<Option<SmtpSession>>>, server: String, login: String, password: String, state: State) -> Command<Message> {
         Command::perform(tokio::task::spawn(
             async move
             {
@@ -142,28 +141,40 @@ impl App {
 
                 if let Ok(mut smtp_session) = SmtpSession::connect(server).await {
                     smtp_session.encrypt_connection().await?;
-                    smtp_session.authenticate(&login, &password).await?;
+                    let result = match state {
+                        screen::login::State::Login => smtp_session.authenticate(&login, &password).await,
+                        screen::login::State::Register => smtp_session.register(&login, &password).await,
+                    };
                     *session = Some(smtp_session);
+                    return result;
                     
                 }
                 else {
                     *session = None;
-                    return Err::<bool, Error>(Error::Smtp("Connection failed".to_string()));
+                    return Err(Error::Smtp("Connection failed".to_string()));
                 }
-                Ok::<bool, Error>(true)
                 
             }),
             |result| {
-                match result.unwrap() {
-                    Ok(_) => {
-                        println!("<== Connection established successfully ==>");
-                        Message::GoHome
-                       
-                    },
-                    Err(e) => {
-                        println!("<== Connection failed ==>");
-                        Message::HomeMsg(home::HomeMessage::UpdateInfoMessage(e.to_string()))
+                if let Ok(result) = result {
+                    match result {
+                        Ok(_) => {
+                            Message::GoHome
+                        },
+                        Err(e) => {
+                            match e {
+                                Error::SmtpResponse(e) => {
+                                    return Message::LoginMsg(LoginMessage::UpdateInfoMessage(format!("Error: \n{}", e).to_string()));
+                                },
+                                _ => {
+                                    return Message::LoginMsg(LoginMessage::UpdateInfoMessage(format!("Error: \r\n{}", e).to_string()));
+                                }
+                            }
+                        }
                     }
+                }
+                else {
+                    return Message::LoginMsg(LoginMessage::UpdateInfoMessage("Connection failed".to_string()));
                 }
             }
         )
@@ -187,18 +198,23 @@ impl App {
                     smtp_session.send_message(message).await?;
                 }
                 else {
-                    return Err::<bool, Error>(Error::Smtp("Connection failed".to_string()));
+                    return Err(Error::Smtp("Connection failed".to_string()));
                 }
                 Ok(true)
             }),
             |result| {
-                match result {
-                    Ok(_) => {
-                        Message::HomeMsg(home::HomeMessage::UpdateInfoMessage("Message sent successfully".to_string()))
-                    },
-                    Err(e) => {
-                        Message::HomeMsg(home::HomeMessage::UpdateInfoMessage(e.to_string()))
+                if let Ok(result) = result {
+                    match result {
+                        Ok(_) => {
+                            Message::HomeMsg(HomeMessage::UpdateInfoMessage("Message sent successfully".to_string()))
+                        },
+                        Err(e) => {
+                            Message::HomeMsg(HomeMessage::UpdateInfoMessage(e.to_string()))
+                        }
                     }
+                }
+                else {
+                    Message::HomeMsg(HomeMessage::UpdateInfoMessage("Connection failed".to_string()))
                 }
             }
         )
