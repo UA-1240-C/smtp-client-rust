@@ -1,5 +1,5 @@
-use iced::{Element, Length};
-use iced::widget::{column, row, Button, Container, Text, TextInput};
+use iced::{Element, Length, Padding};
+use iced::widget::{column, row, Button, Container, Text, TextInput, text_editor::{Content, TextEditor, Action}};
 
 #[derive(Debug, Clone)]
 pub enum HomeMessage {
@@ -7,7 +7,7 @@ pub enum HomeMessage {
     ChangeUser,
     UpdateRecipient(String),
     UpdateSubject(String),
-    UpdateMessage(String),
+    UpdateMessage(Action),
 
     UpdateInfoMessage(String),
 }
@@ -19,12 +19,15 @@ pub struct Home {
 
     recipient: String,
     subject: String,
-    message: String,
+    message: Content,
 }
 
 impl Home {
     pub fn new() -> Self {
-        Home::default()
+        let mut home = Home::default();
+        home.page_description = "SMTP Client".to_string();
+
+        home
     }
 
     pub fn update(&mut self, message: HomeMessage) {
@@ -35,8 +38,8 @@ impl Home {
             HomeMessage::UpdateSubject(subject) => {
                 self.subject = subject;
             },
-            HomeMessage::UpdateMessage(message) => {
-                self.message = message;
+            HomeMessage::UpdateMessage(action) => {
+                self.message.perform(action);
             },
             HomeMessage::UpdateInfoMessage(info_message) => {
                 self.info_message = info_message;
@@ -45,14 +48,24 @@ impl Home {
         }
     }
 
-    pub fn view<'a>(&self) -> Element<'a, HomeMessage> {
+    pub fn view(&self) -> Element<'_, HomeMessage> {
+
         Container::new(
             column![
-                Text::new(self.page_description.clone()),
+                Text::new(self.page_description.clone()).size(25),
 
                 TextInput::new("Recipient", &self.recipient).on_input(|recipient| HomeMessage::UpdateRecipient(recipient)),
                 TextInput::new("Subject", &self.subject).on_input(|subject| HomeMessage::UpdateSubject(subject)),
-                TextInput::new("Message", &self.message).on_input(|message| HomeMessage::UpdateMessage(message)),
+
+                column![
+                    row![
+                        Text::new("Message")
+                    ].padding(Padding::from([0, 0, 8, 0])),
+                    
+                    TextEditor::new(&self.message)
+                        .height(Length::from(200))
+                        .on_action(|action| HomeMessage::UpdateMessage(action)),
+                ].padding(Padding::from([4, 0, 0, 0])),
 
                 row![
                     Button::new("Send").on_press(HomeMessage::Send),
@@ -61,8 +74,10 @@ impl Home {
                 ].spacing(20.),
 
                 Text::new(self.info_message.clone())
-            ].max_width(400.)
+            ].max_width(600)
             .spacing(20.)
+            .align_items(iced::alignment::Vertical::Center.into())
+
         )
         .padding(20.)
         .center_x()
