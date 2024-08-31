@@ -71,10 +71,10 @@ impl Login {
             column![
 
             // text to be displayed on top of the page
-            match self.state {
-                State::Login => Text::new("Login"),
-                State::Register => Text::new("Register"),
-            },
+            Text::new(match self.state {
+                State::Login => "Login",
+                State::Register => "Register",
+            }).size(25),
 
             // input fields
             TextInput::new("smtp.gmail.com:587", &self.server).on_input(|server| LoginMessage::UpdateServer(server)),
@@ -107,7 +107,7 @@ impl Login {
             Text::new(self.info_message.clone()).size(12.0).line_height(1.0),
 
             ].max_width(400)
-            .spacing(20.0)
+            .spacing(20.)
             .align_items(alignment::Vertical::Center.into()),
 
         )
