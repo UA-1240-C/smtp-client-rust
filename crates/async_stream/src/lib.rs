@@ -6,7 +6,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, AsyncWrite, AsyncRead, ReadBuf};
 use tokio_native_tls::{native_tls::TlsConnector as NativeTlsConnector, TlsConnector, TlsStream};
 
 use tokio::net::{TcpStream, lookup_host};
-use std::net::SocketAddr;
+use std::net::{SocketAddr, Ipv4Addr};
 
 pub enum StreamIo<T: AsyncRead + AsyncWrite + Unpin> {
     Plain(T),
@@ -68,10 +68,10 @@ pub enum NodeType {
     Peer,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct NodeInfo {
     m_node_type: NodeType,
-    m_ipv4: String,
+    m_ipv4: Ipv4Addr,
     m_port: u16,
 }
 
@@ -79,21 +79,21 @@ impl NodeInfo {
     pub async fn new(node_type: NodeType, host: &str) -> Result<Self, Error> {
         let result_addrs = lookup_host(host).await?;
         for addr in result_addrs {
-            if let SocketAddr::V4(ipv4) = addr {
+            if let SocketAddr::V4(v4) = addr {
                 return Ok(
                     Self {
                         m_node_type: node_type,
-                        m_ipv4: ipv4.ip().to_string(),
-                        m_port: ipv4.port(),
+                        m_ipv4: *v4.ip(),
+                        m_port: v4.port(),
                     }
-                );
+                )
             }
         }
         Err(Error::AsyncStream("Invalid address".to_string() + " " + host))
     }
 
-    pub fn get_ipv4(&self) -> String {
-        self.m_ipv4.clone()
+    pub fn get_ipv4(&self) -> Ipv4Addr {
+        self.m_ipv4
     }
 
     pub fn get_port(&self) -> u16 {
@@ -109,11 +109,31 @@ impl NodeInfo {
     }
 }
 
+#[derive(Clone, Copy)]
+struct StreamInfo {
+    m_is_encrypted: bool,
+    m_host: NodeInfo,
+    m_peer: NodeInfo,
+}
+
+impl StreamInfo {
+    pub fn is_encrypted(&self) -> bool {
+        self.m_is_encrypted
+    }
+
+    pub fn get_host(&mut self) -> &mut NodeInfo {
+        &mut self.m_host
+    }
+
+    pub fn get_peer(&self) -> &NodeInfo {
+        &self.m_peer
+    }
+}
+
 pub struct AsyncStream {
     m_stream: Option<StreamIo<TcpStream>>,
-    m_is_encrypted: Option<bool>,
-    m_host: Option<NodeInfo>,
-    m_peer: Option<NodeInfo>,
+    m_stream_info: Option<StreamInfo>,
+    m_buffsize: u16,
 }
 
 impl AsyncStream {
@@ -125,9 +145,14 @@ impl AsyncStream {
         Ok(
             Self {
                 m_stream: Some(StreamIo::Plain(stream)),
-                m_is_encrypted: Some(false),
-                m_host: Some(host),
-                m_peer: Some(peer),
+                m_buffsize: 1024,
+                m_stream_info: Some(
+                    StreamInfo {
+                        m_is_encrypted: false,
+                        m_host: host,
+                        m_peer: peer,
+                    }
+                ), 
             }
         )
     }
@@ -144,11 +169,12 @@ impl AsyncStream {
         let tls_connector = TlsConnector::from(native_tls_connector);
 
         if let Some(StreamIo::Plain(stream)) = self.m_stream.take() {
-            if let Some(host) = &self.m_host.take() {
+            if self.m_stream_info.is_some() {
+                let host = *self.m_stream_info.unwrap().get_host();
                 let tls_stream = tls_connector.connect(&host.get_connection_string(), stream).await?;
                 self.m_stream = Some(StreamIo::Encrypted(tls_stream));
-                self.m_is_encrypted = Some(true);
-                return Ok(());
+                self.m_stream_info.unwrap().m_is_encrypted = true;
+                Ok(())
             } else {
                 Err(Error::TlsUpgrade("Encrypt connection. Connection is already encrypted".to_string()))
             }
@@ -158,16 +184,16 @@ impl AsyncStream {
     }
 
     pub fn get_host_info(&self) -> Result<NodeInfo, Error> {
-        if self.is_open() {
-            Ok(self.m_host.as_ref().unwrap().clone())
+        if self.m_stream_info.is_some() {
+            Ok(*self.m_stream_info.unwrap().get_host())
         } else {
             Err(Error::ClosedConnection("Get host info".to_string()))
         }
     }
 
     pub fn get_peer_info(&self) -> Result<NodeInfo, Error> {
-        if self.is_open() {
-            Ok(self.m_peer.as_ref().unwrap().clone())
+        if self.m_stream_info.is_some() {
+            Ok(*self.m_stream_info.unwrap().get_peer())
         } else {
             Err(Error::ClosedConnection("Get peer info".to_string()))
         }
@@ -179,14 +205,12 @@ impl AsyncStream {
 
     pub fn close(&mut self) {
         self.m_stream.take();
-        self.m_is_encrypted.take();
-        self.m_host.take();
-        self.m_peer.take();
+        self.m_stream_info.take();
     }
 
     pub fn is_encrypted(&self) -> Result<bool, Error> {
-        if self.is_open() {
-            Ok(self.m_is_encrypted.unwrap())
+        if self.m_stream_info.is_some() {
+            Ok(self.m_stream_info.unwrap().is_encrypted())
         } else {
             Err(Error::ClosedConnection("Check encryption status".to_string()))
         }
@@ -210,7 +234,7 @@ impl AsyncStream {
 
     async fn read_response_until_crlf(&mut self) -> Result<String, Error> {
         let mut response = String::new();
-        let mut buffer: [u8; 1024] = [0u8; 1024];
+        let mut buffer: Vec<u8> = vec![0; self.m_buffsize as usize];
         
         loop {
             if !self.is_open() {
