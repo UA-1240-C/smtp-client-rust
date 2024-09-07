@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use tokio::{io::Result, signal::unix::{signal, SignalKind}, sync::Mutex};
-use smtp_session::{SmtpSession, SmtpMessageBuilder};
+use smtp_session::{SmtpSession, SmtpMessage};
 
 use std::io::{stdin, stdout, Write};
 
@@ -205,7 +205,7 @@ async fn main() -> Result<()> {
                     }
                 };
 
-                let message = SmtpMessageBuilder::new()
+                let message = SmtpMessage::builder()
                     .from(sender.trim())
                     .to(recipient.trim())
                     .subject(subject.trim())
