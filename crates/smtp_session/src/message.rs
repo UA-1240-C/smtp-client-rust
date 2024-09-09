@@ -10,7 +10,7 @@ pub struct SmtpMessage {
 
 impl SmtpMessage {
 
-    pub fn new() -> SmtpMessageBuilder {
+    pub fn builder() -> SmtpMessageBuilder {
         SmtpMessageBuilder::default()
     }
 
@@ -42,7 +42,7 @@ pub struct SmtpMessageBuilder {
 }
 
 impl SmtpMessageBuilder {
-    pub fn new() -> Self {
+    pub fn default() -> Self {
         Default::default()
     }
 
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn test_smtp_to_imf() {
-        let message = SmtpMessage::new()
+        let message = SmtpMessage::builder()
             .from("johndoe@gmail.com")
             .to("emilydoe@gmail.com")
             .subject("Hello")
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn test_smtp_to_imf_multiple_recipients() {
-        let message = SmtpMessage::new()
+        let message = SmtpMessage::builder()
             .from("johndoe@gmail.com")
             .to("emilydoe@gmail.com")
             .to("alicedoe@gmail.com")
@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_smtp_to_imf_missing_from() {
-        let message = SmtpMessage::new()
+        let message = SmtpMessage::builder()
             .to("emilydoe@gmail.com")
             .subject("Hello")
             .body("Hello, Emily!");
