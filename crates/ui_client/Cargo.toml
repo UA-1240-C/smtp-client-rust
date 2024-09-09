@@ -1,0 +1,11 @@
+[package]
+name = "ui_client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+smtp_session = { path = "../smtp_session" }
+error_handler = { path = "../error_handler" }
+iced = { version = "0.12.1", features = ["default"] }
+regex = { version = "1.10.6", features = ["default"] }
+tokio = { version = "1", features = ["full"] }

@@ -1,0 +1,9 @@
+[package]
+name = "async_stream"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+error_handler = { path = "../error_handler" }
+tokio = { version = "1", features = ["full"] }
+tokio-native-tls = "0.3.0"

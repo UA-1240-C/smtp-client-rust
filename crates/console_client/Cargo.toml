@@ -1,0 +1,10 @@
+[package]
+name = "console_client"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+smtp_session = { path = "../smtp_session" }
+error_handler = { path = "../error_handler" }
+tokio = { version = "1", features = ["full"] }
+tokio-native-tls = "0.3.0"
